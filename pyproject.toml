@@ -1,0 +1,22 @@
+[project]
+name = "das-classification"
+version = "0.1.0"
+description = "DAS Event Classification Pipeline"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "h5py",
+    "torch",
+    "typer",
+    "pyyaml",
+    "matplotlib",
+    "rich",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
