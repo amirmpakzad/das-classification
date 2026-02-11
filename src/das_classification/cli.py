@@ -116,7 +116,7 @@ def train(
     in_channels = int(x0.shape[0])       
     num_classes = len(ds.classes)
 
-    model = DASConvClassifier(ModelConfig(in_channels=in_channels, num_classes=num_classes))
+    model = DASConvClassifier(ModelConfig(in_channels=1, num_classes=num_classes))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Device: {device}")
@@ -170,7 +170,7 @@ def test(
     labels = list(ds.classes)  
 
     model = DASConvClassifier(
-        ModelConfig(in_channels=in_channels, num_classes=num_classes)
+        ModelConfig(in_channels=1, num_classes=num_classes)
     )
 
     device = cfg.run.device if getattr(cfg.run, "device", None) else ("cuda" if torch.cuda.is_available() else "cpu")
