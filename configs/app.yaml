@@ -2,7 +2,7 @@ run:
   name: "exp001"
   base_dir: "runs"
   seed: 42
-  deterministic: true
+  deterministic: false
   splits_dir: "data/splits"   
 
 dataset:
