@@ -12,10 +12,18 @@ import yaml
 from das_classification.data.constants import LABELS, WIN, HOP 
 
 @dataclass(frozen=True)
+class SplitCfg:
+    train: float = 0.8
+    val: float = 0.1
+    test: float = 0.1
+
+
+@dataclass(frozen=True)
 class DatasetCfg:
     root: str
     classes: list[str] = None
-    split: list[str] = None
+    split: SplitCfg = SplitCfg()
+
 
 
 @dataclass(frozen=True)
@@ -61,14 +69,21 @@ def load_config(path: str) -> AppConfig:
     tr_raw = raw.get("training", raw.get("train", {}))  # allow both keys
     run_raw = raw.get("run", {})
 
+    ds_split_raw = ds_raw.get("split", {}) or {}
+    split = SplitCfg(
+        train=float(_get(ds_split_raw, "train", 0.8)),
+        val=float(_get(ds_split_raw, "val", 0.1)),
+        test=float(_get(ds_split_raw, "test", 0.1)),
+        )
+    
     dataset = DatasetCfg(
         root=_get(ds_raw, "root", "data/raw/DAS-dataset/data"),
         classes =_get(ds_raw, "classes", None),
-        split =_get(ds_raw, "split", None),
+        split =split,
     )
 
     
-    imb_raw = raw.get("imbalance", {})
+    imb_raw = tr_raw.get("imbalance", {})
     imbalance = ImbalanceCfg(
         enabled=bool(_get(imb_raw, "enabled", False)),
         method=str(_get(imb_raw, "method", "weights")),
