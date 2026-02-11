@@ -15,6 +15,7 @@ from das_classification.data.constants import LABELS, WIN, HOP
 class DatasetCfg:
     root: str
     classes: list[str] = None
+    split: list[str] = None
 
 
 @dataclass(frozen=True)
@@ -63,6 +64,7 @@ def load_config(path: str) -> AppConfig:
     dataset = DatasetCfg(
         root=_get(ds_raw, "root", "data/raw/DAS-dataset/data"),
         classes =_get(ds_raw, "classes", None),
+        split =_get(ds_raw, "split", None),
     )
 
     
