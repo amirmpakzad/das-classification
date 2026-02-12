@@ -112,7 +112,7 @@ if __name__ == "__main__":
     out_dir   = os.path.abspath("../data/processed")   
 
     
-    labels = ["construction", "manipulation", "fence"]
+    labels = ["construction", "manipulation", "regular"]
 
     # decimation per class
     #decim = {"regular":10}
