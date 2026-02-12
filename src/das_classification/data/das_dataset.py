@@ -39,6 +39,21 @@ class DASDataset(Dataset):
 
         self._handles = [None] * len(self.paths)
 
+    def get_meta(self, idx: int):
+        file_i = 0
+        while file_i + 1 < len(self.offsets) and idx >= self.offsets[file_i + 1]:
+            file_i += 1
+        local_idx = idx - self.offsets[file_i]
+
+        self._ensure_open(file_i)
+        hf = self._handles[file_i]
+        pos = int(hf["pos"][local_idx])
+        ch  = int(hf["ch"][local_idx])
+        src = hf["src"][local_idx]
+        if isinstance(src, bytes):
+            src = src.decode("utf-8")
+        return {"pos": pos, "ch": ch, "src": src, "file_i": file_i, "local_idx": int(local_idx)}
+
     def __len__(self):
         return self.total
 

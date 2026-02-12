@@ -62,7 +62,8 @@ def train_loop(
             loss = F.cross_entropy(
                 logits, 
                 y,
-                weight=(class_weights.to(device) if class_weights is not None else None)
+                weight=(class_weights.to(device) if class_weights is not None else None),
+                label_smoothing=0.1,
                 )
 
             opt.zero_grad(set_to_none=True)

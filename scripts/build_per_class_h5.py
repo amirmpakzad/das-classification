@@ -16,17 +16,26 @@ def window_noise_ok(window_1d: np.ndarray, keep_if_regular: bool) -> bool:
     return spec_cmp_1d(x)
 
 def iter_windows(label_dir: str, fsize: int, shift: int, decimate: int):
-    for ds in glob(os.path.join(label_dir, "*.h5")):
-        with h5py.File(ds, "r") as f:
+    for ds_path in glob(os.path.join(label_dir, "*.h5")):
+        with h5py.File(ds_path, "r") as f:
             data = f["Acquisition"]["Raw[0]"]["RawData"]
-            bmp = np.load(ds[:-2] + "npy")
+            bmp = np.load(ds_path[:-2] + "npy")
 
-            for pos, ch in np.transpose(np.where(bmp))[::decimate]:
+            idxs = np.transpose(np.where(bmp))
+            if decimate and decimate > 1:
+                rng = np.random.default_rng(0)
+                keep_n = max(1, len(idxs) // decimate)
+                keep = rng.choice(len(idxs), size=keep_n, replace=False)
+                idxs = idxs[keep]
+
+            for pos, ch in idxs:
                 start = pos * shift
                 end = start + fsize
                 if end > data.shape[0]:
                     continue
-                yield data[start:end, ch].astype(np.float32)
+                w = data[start:end, ch].astype(np.float32)
+                yield ds_path, int(pos), int(ch), w
+
 
 def build_one_class(
     data_root: str,
@@ -36,7 +45,7 @@ def build_one_class(
     fsize: int,
     shift: int,
     drop_noise: bool,
-    decimate: int,
+    decimate: int = 1,
 ):
     label_dir = os.path.join(data_root, label)
     if not os.path.isdir(label_dir):
@@ -45,9 +54,9 @@ def build_one_class(
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"{label}.h5")
 
-    
+    # --- 1) pass اول: شمارش ---
     n = 0
-    for w in iter_windows(label_dir, fsize, shift, decimate):
+    for src, pos, ch, w in iter_windows(label_dir, fsize, shift, decimate):
         if drop_noise:
             ok = window_noise_ok(w, keep_if_regular=(label == "regular"))
             if not ok:
@@ -57,19 +66,26 @@ def build_one_class(
     if n == 0:
         raise RuntimeError(f"No samples for label={label} after filtering.")
 
-  
+    # --- feature dim ---
     dummy = np.zeros((1, fsize), dtype=np.float32)
-    feat = fft(dummy)  
+    feat = fft(dummy)
     feat_dim = feat.shape[1]
     if sample_len:
         feat_dim = min(sample_len, feat_dim)
 
-   
+    # --- HDF5 string dtype for src ---
+    str_dt = h5py.string_dtype(encoding="utf-8")
+
+    # --- 2) pass دوم: نوشتن ---
     with h5py.File(out_path, "w") as hf:
         x_ds = hf.create_dataset(
             "x", shape=(n, feat_dim), dtype="float32",
             chunks=(min(1024, n), feat_dim)
         )
+        pos_ds = hf.create_dataset("pos", shape=(n,), dtype="int32")
+        ch_ds  = hf.create_dataset("ch",  shape=(n,), dtype="int32")
+        src_ds = hf.create_dataset("src", shape=(n,), dtype=str_dt)
+
         hf.attrs["label"] = label
         hf.attrs["fsize"] = fsize
         hf.attrs["shift"] = shift
@@ -78,15 +94,20 @@ def build_one_class(
         hf.attrs["decimate"] = int(decimate)
 
         idx = 0
-        for w in iter_windows(label_dir, fsize, shift, decimate):
+        for src, pos, ch, w in iter_windows(label_dir, fsize, shift, decimate):
             if drop_noise:
                 ok = window_noise_ok(w, keep_if_regular=(label == "regular"))
                 if not ok:
                     continue
+
             x = fft(w.reshape(1, -1))
             if sample_len:
                 x = x[:, :sample_len]
+
             x_ds[idx] = x[0].astype(np.float32)
+            pos_ds[idx] = pos
+            ch_ds[idx]  = ch
+            src_ds[idx] = os.path.basename(src)  # یا کل path اگر می‌خوای
             idx += 1
 
         assert idx == n, (idx, n)
@@ -100,10 +121,10 @@ if __name__ == "__main__":
     out_dir   = os.path.abspath("../data/processed")   
 
     
-    labels = ["regular", "construction", "manipulation"]
+    labels = ["regular", "construction", "manipulation", "fence"]
 
     # decimation per class
-    decim = {"regular":10}
+    #decim = {"regular":10}
 
     for label in labels:
         build_one_class(
@@ -114,5 +135,5 @@ if __name__ == "__main__":
             fsize=8192,
             shift=2048,
             drop_noise=True,              
-            decimate=decim.get(label, 1),
+            decimate=1,
         )

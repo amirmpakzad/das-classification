@@ -37,7 +37,6 @@ def test_loop(
     device: str,
     num_classes: int,
     save_viz_n: int = 10,
-    viz_seed:int = 42
 )-> TestResult:
     model.eval()
     total_loss = 0.0
@@ -47,7 +46,6 @@ def test_loop(
     cm_total = torch.zeros((num_classes, num_classes), dtype=torch.long)
 
     viz = []
-    g = torch.Generator().manual_seed(viz_seed)
 
     for batch in loader:
         x, y = batch 
@@ -70,7 +68,7 @@ def test_loop(
             bsz = x.shape[0]
             remaining = save_viz_n - len(viz)
             k = min(remaining, bsz)
-            idx = torch.randperm(bsz, generator=g, device=device)[:k]
+            idx = torch.randperm(bsz, device=device)[:k]
 
             viz.append({
                 "x": x.index_select(0, idx).detach().cpu(),      #[k, 1, ...]
