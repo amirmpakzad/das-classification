@@ -11,7 +11,7 @@ dataset:
     - construction
     - manipulation
     - regular
-    - fence
+
   split:
     train: 0.8
     val: 0.1

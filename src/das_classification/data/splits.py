@@ -60,7 +60,7 @@ def ensure_splits(ds, splits_dir: Path,
         val_idx.extend(global_idx[mask_va].tolist())
         test_idx.extend(global_idx[mask_te].tolist())
 
-    # shuffle نهایی
+    # shuffle 
     rng_global.shuffle(train_idx)
     rng_global.shuffle(val_idx)
     rng_global.shuffle(test_idx)
