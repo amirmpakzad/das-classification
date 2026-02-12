@@ -1,18 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONFIG=${1:-configs/app.yaml}
-shift || true   
+RUN_DIR="${1:?You must provide RUN_DIR as first argument}"
+shift
 
-cd "../"  
+CONFIG="${1:-configs/app.yaml}"
+shift || true
+
+cd ..
 source venv/bin/activate
 
 mkdir -p logs
-LOG="logs/test_$(date +%Y%m%d_%H%M%S).log"
 
+SAFE_RUN_DIR=$(echo "$RUN_DIR" | tr ' /' '__')
+LOG="logs/test_${SAFE_RUN_DIR}_$(date +%Y%m%d_%H%M%S).log"
+
+echo "Run dir: $RUN_DIR"
 echo "Config: $CONFIG"
 echo "Logging to: $LOG"
 
-LOG="logs/test_$(date +%Y%m%d_%H%M%S).log"
-
-python -m das_classification.cli test --config "$CONFIG" "$@" 2>&1 | tee "$LOG"
+python -m das_classification.cli test \
+    --config "$CONFIG" \
+    --run_dir "$RUN_DIR" \
+    "$@" \
+    2>&1 | tee "$LOG"

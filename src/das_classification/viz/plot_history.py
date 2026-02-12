@@ -14,7 +14,7 @@ def load_epoch_history(history_path: str) -> Dict[str, List[float]]:
     p = Path(history_path)
 
     if not p.exists():
-        raise FileNotFoundError("file not found")
+        raise FileNotFoundError(f"file not found {p}")
     
     epochs = []
     train_loss, val_loss = [], []
@@ -49,7 +49,7 @@ def plot_history(
     show: bool = True,
 ) -> None:
     series = load_epoch_history(history_path)
-    epochs = series["epoch"]
+    epochs = series["epochs"]
 
     # Loss plot
     plt.figure()

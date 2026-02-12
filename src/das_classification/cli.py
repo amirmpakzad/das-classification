@@ -17,6 +17,7 @@ from das_classification.train.loop import train_loop, TrainConfig
 from das_classification.train.test import test_loop, load_checkpoint, save_report_txt
 from das_classification.viz.confusion import save_confusion_matrix_png
 from das_classification.viz.plot_history import plot_history
+from das_classification.viz.plot_window import plot_window
 from das_classification.data.splits import ensure_splits
 
 
@@ -42,6 +43,7 @@ def sanity(
 
 @app.command()  
 def train(
+    run_name: str = typer.Option(..., help="Name of this experiment"),
     config: str = typer.Option(..., help="Path to an app config YAML")
 ):
     cfg = load_config(config)
@@ -112,8 +114,6 @@ def train(
         pin_memory=True,
     )
 
-    x0, _ = ds[0]
-    in_channels = int(x0.shape[0])       
     num_classes = len(ds.classes)
 
     model = DASConvClassifier(ModelConfig(in_channels=1, num_classes=num_classes))
@@ -138,7 +138,7 @@ def train(
 def test(
     config: str = typer.Option(..., help="Path to an app config YAML"),
     ckpt: str = typer.Option("", help="Checkpoint path. If empty, uses <run_dir>/best.pt"),
-    run_dir: str = typer.Option("", help="Run directory that contains best.pt/last.pt"),
+    run_dir: str = typer.Option(..., help="Run directory that contains best.pt/last.pt"),
 ):
     cfg = load_config(config)
     seed_everything(SeedConfig(cfg.run.seed, deterministic=cfg.run.deterministic))
@@ -200,6 +200,22 @@ def test(
     # --- save reports ---
     report_path = str(out_dir / "test_report.txt")
     save_report_txt(report_path, res.loss, res.acc, res.cm, labels)
+
+    # --- plot windows ---
+    for i, item in enumerate(res.viz or []):
+        xs, ys, ps = item["x"], item["y"], item["pred"] 
+        k = xs.shape[0]
+
+        for j in range(k):
+            plot_window(
+                x=xs[j],
+                y=ys[j],
+                pred=ps[j],
+                idx=i*10 + j,
+                labels=labels,
+                run_id=run_dir,
+            )
+
 
     logger.info(f"Loaded epoch: {epoch}")
     logger.info(f"test loss: {res.loss:.6f} | test acc: {res.acc:.4f}")

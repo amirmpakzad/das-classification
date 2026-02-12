@@ -3,7 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import torch
 import torch.nn as nn
@@ -19,6 +19,7 @@ class TestResult:
     loss: float
     acc : float 
     cm : torch.Tensor 
+    viz : Optional[List[Dict[str, torch.Tensor]]] = None
 
 
 def load_checkpoint(model: nn.Module, ckpt_path: str, device: str) -> int:
@@ -35,6 +36,8 @@ def test_loop(
     loader: DataLoader,
     device: str,
     num_classes: int,
+    save_viz_n: int = 10,
+    viz_seed:int = 42
 )-> TestResult:
     model.eval()
     total_loss = 0.0
@@ -42,6 +45,9 @@ def test_loop(
     n = 0
 
     cm_total = torch.zeros((num_classes, num_classes), dtype=torch.long)
+
+    viz = []
+    g = torch.Generator().manual_seed(viz_seed)
 
     for batch in loader:
         x, y = batch 
@@ -60,8 +66,25 @@ def test_loop(
         cm_total += confusion_matrix(logits, y, num_classes=num_classes)
         n+=1 
 
+        if save_viz_n > 0 and len(viz) < save_viz_n:
+            bsz = x.shape[0]
+            remaining = save_viz_n - len(viz)
+            k = min(remaining, bsz)
+            idx = torch.randperm(bsz, generator=g, device=device)[:k]
+
+            viz.append({
+                "x": x.index_select(0, idx).detach().cpu(),      #[k, 1, ...]
+                "y": y.index_select(0, idx).detach().cpu(),      # [k]
+                "pred": pred.index_select(0, idx).detach().cpu() # [k]
+            })
+
     if n == 0:
-        return TestResult(loss=float("nan"), acc=float("nan"), cm=cm_total)
+        return TestResult(
+            loss=float("nan"),
+            acc=float("nan"), 
+            cm=cm_total,
+            viz=viz if save_viz_n > 0 else None
+            )
 
     return TestResult(loss=total_loss / n, acc=total_acc / n, cm=cm_total)
 
